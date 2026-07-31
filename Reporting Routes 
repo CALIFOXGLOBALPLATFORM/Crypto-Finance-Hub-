@@ -49,3 +49,56 @@ const prisma = new PrismaClient();
 router.get('/user/:userId/transactions', async (req, res) => {
   const { userId } = req.params;
   const { format } = req.query; // pdf | csv | excel
+
+  const transactions = await prisma.transaction.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  if (format === 'csv') {
+    const parser = new CsvParser();
+    const csv = parser.parse(transactions);
+    res.header('Content-Type', 'text/csv');
+    res.attachment('transactions.csv');
+    return res.send(csv);
+  }
+
+  if (format === 'excel') {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Transactions');
+    sheet.addRow(Object.keys(transactions[0]));
+    transactions.forEach(tx => sheet.addRow(Object.values(tx)));
+    res.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.attachment('transactions.xlsx');
+    await workbook.xlsx.write(res);
+    return res.end();
+  }
+
+  if (format === 'pdf') {
+    const doc = new PDFDocument();
+    res.header('Content-Type', 'application/pdf');
+    res.attachment('transactions.pdf');
+    doc.pipe(res);
+    doc.fontSize(18).text('Transaction History', { align: 'center' });
+    transactions.forEach(tx => {
+      doc.fontSize(12).text(`${tx.type} - ${tx.amount} - ${tx.status} - ${tx.createdAt}`);
+    });
+    doc.end();
+    return;
+  }
+
+  res.json(transactions);
+});
+
+// 🔹 Admin reports: deposits, withdrawals, investments
+router.get('/admin/summary', async (req, res) => {
+  const deposits = await prisma.transaction.count({ where: { type: 'DEPOSIT' } });
+  const withdrawals = await prisma.transaction.count({ where: { type: 'WITHDRAWAL' } });
+  const investments = await prisma.investment.count();
+
+  res.json({
+    deposits,
+    withdrawals,
+    investments,
+  });
+});
