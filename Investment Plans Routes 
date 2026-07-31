@@ -1,0 +1,56 @@
+// src/routes/investments.ts
+import { Router } from 'express';
+import { PrismaClient } from '@prisma/client';
+
+const router = Router();
+const prisma = new PrismaClient();
+
+// Get all active plans
+router.get('/plans', async (req, res) => {
+  const plans = await prisma.investmentPlan.findMany({
+    where: { status: 'ACTIVE' },
+  });
+  res.json(plans);
+});
+
+// Admin: create new plan
+router.post('/plans', async (req, res) => {
+  const { name, description, currency, minAmount, maxAmount, duration } = req.body;
+  try {
+    const plan = await prisma.investmentPlan.create({
+      data: { name, description, currency, minAmount, maxAmount, duration, status: 'ACTIVE' },
+    });
+    res.json({ message: 'Plan created', plan });
+  } catch (err) {
+    res.status(400).json({ error: 'Failed to create plan', details: err });
+  }
+});
+
+// User: start investment
+router.post('/invest', async (req, res) => {
+  const { userId, planId, amount } = req.body;
+  try {
+    const plan = await prisma.investmentPlan.findUnique({ where: { id: planId } });
+    if (!plan) return res.status(404).json({ error: 'Plan not found' });
+
+    if (amount < plan.minAmount || amount > plan.maxAmount) {
+      return res.status(400).json({ error: 'Amount outside plan limits' });
+    }
+
+    const investment = await prisma.investment.create({
+      data: {
+        userId,
+        planId,
+        amount,
+        status: 'ACTIVE',
+        endsAt: new Date(Date.now() + plan.duration * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    res.json({ message: 'Investment started', investment });
+  } catch (err) {
+    res.status(400).json({ error: 'Failed to start investment', details: err });
+  }
+});
+
+export default router;
