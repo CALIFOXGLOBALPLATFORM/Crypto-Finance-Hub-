@@ -1,0 +1,42 @@
+// src/middleware/auditLogger.ts
+import { PrismaClient } from '@prisma/client';
+import { Request, Response, NextFunction } from 'express';
+
+const prisma = new PrismaClient();
+
+/**
+ * Audit logger middleware
+ * @param action - The action being performed (e.g., "BALANCE_ADJUSTMENT")
+ * @param reason - Reason provided by admin/user
+ * @param oldValue - Previous state/value
+ * @param newValue - New state/value
+ */
+export async function auditLogger(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  // Attach helper to request object
+  req.logAudit = async (
+    action: string,
+    reason: string,
+    oldValue: any,
+    newValue: any
+  ) => {
+    const userId = req.user?.id || null; // from JWT middleware
+    const adminId = req.admin?.id || null;
+
+    await prisma.auditLog.create({
+      data: {
+        userId,
+        adminId,
+        action,
+        reason,
+        oldValue: oldValue ? JSON.stringify(oldValue) : null,
+        newValue: newValue ? JSON.stringify(newValue) : null,
+      },
+    });
+  };
+
+  next();
+}
