@@ -24,20 +24,116 @@ router.post('/crypto/deposit', async (req, res) => {
       data: {
         userId,
         action: 'CRYPTO_DEPOSIT',
-        reason: `TxHash: ${txHashAlright Dave, let’s extend the backend with the **wallet system routes** — covering crypto deposits, bank deposits, and withdrawals. These routes will handle transaction creation, status updates, audit logging, and notifications.  
+        reason: `TxHash: ${txHash}`,
+        newValue: JSON.stringify(transaction),
+      },
+    });
 
----
+    res.json({ message: 'Crypto deposit submitted', transaction });
+  } catch (err) {
+    res.status(400).json({ error: 'Failed to create deposit', details: err });
+  }
+});
 
-## 💳 Wallet & Transaction Routes
+// 🔹 Create bank deposit
+router.post('/bank/deposit', async (req, res) => {
+  const { userId, amount, reference } = req.body;
+  try {
+    const transaction = await prisma.transaction.create({
+      data: {
+        userId,
+        type: 'DEPOSIT',
+        amount,
+        status: 'AWAITING_REVIEW',
+        reason: `Bank deposit reference: ${reference}`,
+      },
+    });
 
-```ts
-// src/routes/wallet.ts
-import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
+    await prisma.auditLog.create({
+      data: {
+        userId,
+        action: 'BANK_DEPOSIT',
+        reason: `Reference: ${reference}`,
+        newValue: JSON.stringify(transaction),
+      },
+    });
 
-const router = Router();
-const prisma = new PrismaClient();
+    res.json({ message: 'Bank deposit submitted', transaction });
+  } catch (err) {
+    res.status(400).json({ error: 'Failed to create bank deposit', details: err });
+  }
+});
 
-// 🔹 Create crypto deposit
-router.post('/crypto/deposit', async (req, res) => {
-  const { userId
+// 🔹 Create crypto withdrawal
+router.post('/crypto/withdraw', async (req, res) => {
+  const { userId, amount, walletAddress } = req.body;
+  try {
+    const transaction = await prisma.transaction.create({
+      data: {
+        userId,
+        type: 'WITHDRAWAL',
+        amount,
+        status: 'PENDING',
+        reason: `Crypto withdrawal to ${walletAddress}`,
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        userId,
+        action: 'CRYPTO_WITHDRAWAL',
+        reason: `Wallet: ${walletAddress}`,
+        newValue: JSON.stringify(transaction),
+      },
+    });
+
+    res.json({ message: 'Crypto withdrawal submitted', transaction });
+  } catch (err) {
+    res.status(400).json({ error: 'Failed to create withdrawal', details: err });
+  }
+});
+
+// 🔹 Create bank withdrawal
+router.post('/bank/withdraw', async (req, res) => {
+  const { userId, amount, bankAccount } = req.body;
+  try {
+    const transaction = await prisma.transaction.create({
+      data: {
+        userId,
+        type: 'WITHDRAWAL',
+        amount,
+        status: 'PENDING',
+        reason: `Bank withdrawal to ${bankAccount}`,
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        userId,
+        action: 'BANK_WITHDRAWAL',
+        reason: `Account: ${bankAccount}`,
+        newValue: JSON.stringify(transaction),
+      },
+    });
+
+    res.json({ message: 'Bank withdrawal submitted', transaction });
+  } catch (err) {
+    res.status(400).json({ error: 'Failed to create withdrawal', details: err });
+  }
+});
+
+// 🔹 Get user transactions
+router.get('/transactions/:userId', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const transactions = await prisma.transaction.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(transactions);
+  } catch (err) {
+    res.status(400).json({ error: 'Failed to fetch transactions', details: err });
+  }
+});
+
+export default router;
