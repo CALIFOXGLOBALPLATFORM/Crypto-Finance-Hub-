@@ -1,7 +1,0 @@
-model NotificationChannel {
-  id        String   @id @default(uuid())
-  name      String   // e.g. "Finance", "Compliance", "Support"
-  chatId    String   // Telegram chat ID
-  events    String[] // List of event types this channel should receive
-  createdAt DateTime @default(now())
-}
