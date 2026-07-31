@@ -1,0 +1,16 @@
+// src/routes/analytics.ts
+import { Router } from 'express';
+import { requireRole } from '../middleware/rbac';
+
+const router = Router();
+
+// Protect analytics routes
+router.get('/user-growth', requireRole(['ADMIN', 'SUPER_ADMIN']), async (req, res) => {
+  // Analytics logic here
+});
+
+router.get('/deposits', requireRole(['ADMIN', 'SUPER_ADMIN']), async (req, res) => {
+  // Analytics logic here
+});
+
+export default router;
