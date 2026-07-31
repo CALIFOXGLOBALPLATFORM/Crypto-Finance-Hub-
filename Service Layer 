@@ -1,0 +1,23 @@
+// src/services/notificationManager.ts
+import { PrismaClient } from '@prisma/client';
+import axios from 'axios';
+
+const prisma = new PrismaClient();
+const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
+
+async function sendTelegramMessage(chatId: string, message: string) {
+  await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
+    chat_id: chatId,
+    text: message,
+  });
+}
+
+export async function notifyEvent(eventType: string, message: string) {
+  const channels = await prisma.notificationChannel.findMany({
+    where: { events: { has: eventType } },
+  });
+
+  for (const channel of channels) {
+    await sendTelegramMessage(channel.chatId, message);
+  }
+}
