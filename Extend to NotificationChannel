@@ -1,0 +1,8 @@
+model NotificationChannel {
+  id        String   @id @default(uuid())
+  name      String   // e.g. "Finance", "Compliance", "Support"
+  provider  String   // "TELEGRAM", "SLACK", "EMAIL"
+  target    String   // chatId, webhook URL, or email address
+  events    String[] // List of event types this channel should receive
+  createdAt DateTime @default(now())
+}
