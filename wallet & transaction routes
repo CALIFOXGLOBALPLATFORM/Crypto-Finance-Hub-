@@ -1,0 +1,43 @@
+// src/routes/wallet.ts
+import { Router } from 'express';
+import { PrismaClient } from '@prisma/client';
+
+const router = Router();
+const prisma = new PrismaClient();
+
+// 🔹 Create crypto deposit
+router.post('/crypto/deposit', async (req, res) => {
+  const { userId, amount, currency, txHash } = req.body;
+  try {
+    const transaction = await prisma.transaction.create({
+      data: {
+        userId,
+        type: 'DEPOSIT',
+        amount,
+        status: 'PENDING',
+        reason: `Crypto deposit initiated (${currency})`,
+      },
+    });
+
+    // Audit log
+    await prisma.auditLog.create({
+      data: {
+        userId,
+        action: 'CRYPTO_DEPOSIT',
+        reason: `TxHash: ${txHashAlright Dave, let’s extend the backend with the **wallet system routes** — covering crypto deposits, bank deposits, and withdrawals. These routes will handle transaction creation, status updates, audit logging, and notifications.  
+
+---
+
+## 💳 Wallet & Transaction Routes
+
+```ts
+// src/routes/wallet.ts
+import { Router } from 'express';
+import { PrismaClient } from '@prisma/client';
+
+const router = Router();
+const prisma = new PrismaClient();
+
+// 🔹 Create crypto deposit
+router.post('/crypto/deposit', async (req, res) => {
+  const { userId
