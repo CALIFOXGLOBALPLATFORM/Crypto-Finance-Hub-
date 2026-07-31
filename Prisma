@@ -1,0 +1,222 @@
+// schema.prisma
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id             String        @id @default(uuid())
+  email          String        @unique
+  passwordHash   String
+  firstName      String
+  lastName       String
+  role           Role          @default(USER)
+  isEmailVerified Boolean      @default(false)
+  twoFactorEnabled Boolean     @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  wallets        Wallet[]
+  transactions   Transaction[]
+  investments    Investment[]
+  kyc            KYC?
+  notifications  Notification[]
+  supportTickets SupportTicket[]
+  auditLogs      AuditLog[]
+}
+
+enum Role {
+  USER
+  SUPPORT
+  ADMIN
+  SUPER_ADMIN
+}
+
+model Wallet {
+  id        String       @id @default(uuid())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id])
+  type      WalletType
+  balance   Decimal      @default(0.0)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  transactions Transaction[]
+}
+
+enum WalletType {
+  CRYPTO
+  BANK
+}
+
+model Transaction {
+  id          String       @id @default(uuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
+  walletId    String?
+  wallet      Wallet?      @relation(fields: [walletId], references: [id])
+  type        TransactionType
+  amount      Decimal
+  status      TransactionStatus
+  reason      String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  INVESTMENT
+  ADJUSTMENT
+}
+
+enum TransactionStatus {
+  PENDING
+  PROCESSING
+  APPROVED
+  COMPLETED
+  REJECTED
+}
+
+model Investment {
+  id          String       @id @default(uuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
+  planId      String
+  plan        InvestmentPlan @relation(fields: [planId], references: [id])
+  amount      Decimal
+  status      InvestmentStatus
+  startedAt   DateTime     @default(now())
+  endsAt      DateTime
+  createdAt   DateTime     @default(now())
+}
+
+model InvestmentPlan {
+  id          String       @id @default(uuid())
+  name        String
+  description String
+  currency    String
+  minAmount   Decimal
+  maxAmount   Decimal
+  duration    Int          // days
+  status      PlanStatus   @default(ACTIVE)
+  createdAt   DateTime     @default(now())
+}
+
+enum InvestmentStatus {
+  ACTIVE
+  COMPLETED
+  PAUSED
+  ARCHIVED
+}
+
+enum PlanStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+model KYC {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  documentType KycDocumentType
+  status    KycStatus @default(NOT_STARTED)
+  submittedAt DateTime?
+  reviewedAt  DateTime?
+}
+
+enum KycDocumentType {
+  PASSPORT
+  DRIVER_LICENSE
+  NATIONAL_ID
+}
+
+enum KycStatus {
+  NOT_STARTED
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+}
+
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  type      NotificationType
+  message   String
+  isRead    Boolean   @default(false)
+  createdAt DateTime  @default(now())
+}
+
+enum NotificationType {
+  REGISTRATION
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+  LOGIN_ALERT
+  DEPOSIT_UPDATE
+  WITHDRAWAL_UPDATE
+  KYC_UPDATE
+  INVESTMENT_UPDATE
+  SUPPORT_REPLY
+  ANNOUNCEMENT
+  SECURITY_ALERT
+}
+
+model SupportTicket {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  subject   String
+  message   String
+  status    TicketStatus @default(OPEN)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+enum TicketStatus {
+  OPEN
+  ASSIGNED
+  IN_PROGRESS
+  WAITING_FOR_USER
+  RESOLVED
+  CLOSED
+}
+
+model AuditLog {
+  id        String    @id @default(uuid())
+  userId    String?
+  user      User?     @relation(fields: [userId], references: [id])
+  adminId   String?
+  action    String
+  reason    String?
+  oldValue  String?
+  newValue  String?
+  createdAt DateTime  @default(now())
+}
+
+model AcademyCourse {
+  id        String    @id @default(uuid())
+  title     String
+  description String
+  createdAt DateTime  @default(now())
+  lessons   AcademyLesson[]
+}
+
+model AcademyLesson {
+  id        String    @id @default(uuid())
+  courseId  String
+  course    AcademyCourse @relation(fields: [courseId], references: [id])
+  title     String
+  content   String
+  videoUrl  String?
+  pdfUrl    String?
+  quizId    String?
+  createdAt DateTime  @default(now())
+}
