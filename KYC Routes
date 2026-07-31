@@ -1,0 +1,71 @@
+// src/routes/kyc.ts
+import { Router } from 'express';
+import { PrismaClient } from '@prisma/client';
+import { requireRole } from '../middleware/rbac';
+import { sendNotification } from '../services/notificationService';
+import { sendEmail } from '../services/emailService';
+
+const router = Router();
+const prisma = new PrismaClient();
+
+// 🔹 User submits KYC document
+router.post('/submit', async (req, res) => {
+  const { userId, documentType, fileUrl } = req.body;
+  try {
+    const kyc = await prisma.kYC.create({
+      data: {
+        userId,
+        documentType,
+        status: 'SUBMITTED',
+        submittedAt: new Date(),
+      },
+    });
+
+    await sendNotification(userId, 'KYC_UPDATE', 'Your KYC document has been submitted');
+    await sendEmail(req.user.email, 'KYC Submitted', `<p>Your ${documentType} has been submitted for review.</p>`);
+
+    res.json({ message: 'KYC submitted successfully', kyc });
+  } catch (err) {
+    res.status(400).json({ error: 'Failed to submit KYC', details: err });
+  }
+});
+
+// 🔹 Admin reviews KYC
+router.post('/review/:id', requireRole(['ADMIN', 'SUPER_ADMIN']), async (req, res) => {
+  const { id } = req.params;
+  const { status, reason } = req.body;
+
+  if (!['APPROVED', 'REJECTED'].includes(status)) {
+    return res.status(400).json({ error: 'Invalid status' });
+  }
+
+  const kyc = await prisma.kYC.update({
+    where: { id },
+    data: {
+      status,
+      reviewedAt: new Date(),
+    },
+  });
+
+  // Audit log
+  await prisma.auditLog.create({
+    data: {
+      adminId: req.user.id,
+      userId: kyc.userId,
+      action: 'KYC_REVIEW',
+      reason,
+      oldValue: JSON.stringify({ status: 'SUBMITTED' }),
+      newValue: JSON.stringify({ status }),
+    },
+  });
+
+  // Notify user
+  const message = status === 'APPROVED'
+    ? 'Your KYC has been approved'
+    : `Your KYC was rejected. Reason: ${reason}`;
+
+  await sendNotification(kyc.userId, 'KYC_UPDATE', message);
+  await sendEmail('user@example.com', 'KYC Review Result', `<p>${message}</p>`);
+
+  res.json({ message: 'KYC reviewed successfully', kyc });
+});
