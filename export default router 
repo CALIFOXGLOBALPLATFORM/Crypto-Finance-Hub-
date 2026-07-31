@@ -1,0 +1,10 @@
+---
+
+## 🛠️ Integration
+
+Mount in `src/server.ts`:
+
+```ts
+import walletRoutes from './routes/wallet';
+
+app.use('/api/wallet', walletRoutes);
