@@ -1,0 +1,7 @@
+import { sendNotification } from '../services/notificationService';
+import { sendEmail } from '../services/emailService';
+import { depositSubmittedTemplate } from '../templates/emails/depositSubmitted';
+
+// Inside crypto deposit route
+await sendNotification(userId, 'DEPOSIT_UPDATE', `Crypto deposit of ${amount} ${currency} submitted`);
+await sendEmail(user.email, 'Deposit Submitted', depositSubmittedTemplate(amount, currency));
