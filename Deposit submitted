@@ -1,0 +1,12 @@
+// src/templates/emails/depositSubmitted.ts
+export const depositSubmittedTemplate = (amount: number, currency: string) => `
+  <html>
+    <body style="font-family: Arial, sans-serif; background-color:#f9f9f9; padding:20px;">
+      <h2 style="color:#2c3e50;">Deposit Submitted</h2>
+      <p>Your deposit of <strong>${amount} ${currency}</strong> has been submitted and is awaiting review.</p>
+      <p>We’ll notify you once it’s processed.</p>
+      <br/>
+      <p style="font-size:12px; color:#888;">Crypto Finance Hub</p>
+    </body>
+  </html>
+`;
