@@ -1,0 +1,68 @@
+// src/routes/analytics.ts
+import { Router } from 'express';
+import { PrismaClient } from '@prisma/client';
+
+const router = Router();
+const prisma = new PrismaClient();
+
+// 🔹 User growth over time
+router.get('/user-growth', async (req, res) => {
+  const users = await prisma.user.groupBy({
+    by: ['createdAt'],
+    _count: { id: true },
+  });
+
+  const data = users.map(u => ({
+    date: u.createdAt.toISOString().split('T')[0],
+    count: u._count.id,
+  }));
+
+  res.json(data);
+});
+
+// 🔹 Deposits overview
+router.get('/deposits', async (req, res) => {
+  const deposits = await prisma.transaction.groupBy({
+    by: ['status'],
+    _sum: { amount: true },
+    _count: { id: true },
+    where: { type: 'DEPOSIT' },
+  });
+
+  res.json(deposits);
+});
+
+// 🔹 Withdrawals overview
+router.get('/withdrawals', async (req, res) => {
+  const withdrawals = await prisma.transaction.groupBy({
+    by: ['status'],
+    _sum: { amount: true },
+    _count: { id: true },
+    where: { type: 'WITHDRAWAL' },
+  });
+
+  res.json(withdrawals);
+});
+
+// 🔹 Active investments
+router.get('/investments', async (req, res) => {
+  const investments = await prisma.investment.groupBy({
+    by: ['status'],
+    _sum: { amount: true },
+    _count: { id: true },
+  });
+
+  res.json(investments);
+});
+
+// 🔹 Support statistics
+router.get('/support', async (req, res) => {
+  const tickets = await prisma.supportTicket.groupBy({
+    by: ['status'],
+    _count: { id: true },
+  });
+
+  res.json(tickets);
+});
+
+export default router;
