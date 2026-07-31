@@ -1,0 +1,45 @@
+// src/services/telegramService.ts
+import axios from 'axios';
+
+const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
+const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+
+async function sendTelegramMessage(message: string) {
+  await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
+    chat_id: CHAT_ID,
+    text: message,
+  });
+}
+
+// Existing notifications...
+export async function notifyNewUser(email: string) {
+  await sendTelegramMessage(`🚀 New user registered: ${email}`);
+}
+export async function notifyDeposit(userEmail: string, amount: number, currency: string) {
+  await sendTelegramMessage(`💰 Deposit: ${userEmail} deposited ${amount} ${currency}`);
+}
+export async function notifyWithdrawal(userEmail: string, amount: number, currency: string) {
+  await sendTelegramMessage(`📤 Withdrawal: ${userEmail} withdrew ${amount} ${currency}`);
+}
+export async function notifyBalanceAdjustment(adminEmail: string, userEmail: string, amount: number, reason: string) {
+  await sendTelegramMessage(`⚖️ Balance Adjustment by ${adminEmail} for ${userEmail}: ${amount}. Reason: ${reason}`);
+}
+
+// 🔹 New KYC notifications
+export async function notifyKycSubmitted(userEmail: string, documentType: string) {
+  await sendTelegramMessage(`🪪 KYC Submitted: ${userEmail} uploaded ${documentType}`);
+}
+export async function notifyKycReviewed(userEmail: string, status: string, reason?: string) {
+  const msg = status === 'APPROVED'
+    ? `✅ KYC Approved: ${userEmail}`
+    : `❌ KYC Rejected: ${userEmail}. Reason: ${reason}`;
+  await sendTelegramMessage(msg);
+}
+
+// 🔹 Support ticket notifications
+export async function notifySupportTicketCreated(userEmail: string, subject: string) {
+  await sendTelegramMessage(`🎟️ Support Ticket: ${userEmail} opened "${subject}"`);
+}
+export async function notifySupportTicketResolved(userEmail: string, subject: string) {
+  await sendTelegramMessage(`✔️ Ticket Resolved: "${subject}" for ${userEmail}`);
+}
