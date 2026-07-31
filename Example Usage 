@@ -1,0 +1,11 @@
+// User registration
+await notifyEvent('USER_REGISTERED', `🚀 New user registered: ${email}`);
+
+// Deposit
+await notifyEvent('DEPOSIT', `💰 Deposit: ${user.email} deposited ${amount} ${currency}`);
+
+// KYC submission
+await notifyEvent('KYC_SUBMITTED', `🪪 KYC Submitted: ${user.email} uploaded ${documentType}`);
+
+// Support ticket
+await notifyEvent('SUPPORT_TICKET_CREATED', `🎟️ Ticket: ${user.email} opened "${subject}"`);
