@@ -1,0 +1,46 @@
+// src/routes/admin.ts
+import { Router } from 'express';
+import { PrismaClient } from '@prisma/client';
+
+const router = Router();
+const prisma = new PrismaClient();
+
+// Manual balance adjustment
+router.post('/adjust-balance', async (req, res) => {
+  const { userId, amount, reason } = req.body;
+
+  if (!reason) {
+    return res.status(400).json({ error: 'Reason is required' });
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) return res.status(404).json({ error: 'User not found' });
+
+  const oldBalance = await prisma.wallet.findFirst({
+    where: { userId, type: 'BANK' },
+  });
+
+  const updatedWallet = await prisma.wallet.update({
+    where: { id: oldBalance?.id },
+    data: { balance: oldBalance!.balance + amount },
+  });
+
+  // Log audit
+  await req.logAudit(
+    'BALANCE_ADJUSTMENT',
+    reason,
+    oldBalance,
+    updatedWallet
+  );
+
+  // Notify user
+  await prisma.notification.create({
+    data: {
+      userId,
+      type: 'SECURITY_ALERT',
+      message: `Your balance was adjusted by admin. Reason: ${reason}`,
+    },
+  });
+
+  res.json({ message: 'Balance adjusted successfully', updatedWallet });
+});
