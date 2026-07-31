@@ -1,0 +1,13 @@
+// src/routes/admin.ts
+import { Router } from 'express';
+import { requireRole } from '../middleware/rbac';
+
+const router = Router();
+
+// Only ADMIN or SUPER_ADMIN can access
+router.get('/summary', requireRole(['ADMIN', 'SUPER_ADMIN']), async (req, res) => {
+  // Admin summary logic here
+  res.json({ message: 'Admin summary data' });
+});
+
+export default router;
