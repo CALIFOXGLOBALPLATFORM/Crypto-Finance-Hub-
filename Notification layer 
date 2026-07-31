@@ -1,0 +1,48 @@
+// src/services/notificationManager.ts
+import { PrismaClient } from '@prisma/client';
+import axios from 'axios';
+import nodemailer from 'nodemailer';
+
+const prisma = new PrismaClient();
+const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
+const SLACK_WEBHOOK = process.env.SLACK_WEBHOOK;
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: Number(process.env.SMTP_PORT),
+  auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+});
+
+async function sendTelegram(chatId: string, message: string) {
+  await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
+    chat_id: chatId,
+    text: message,
+  });
+}
+
+async function sendSlack(webhook: string, message: string) {
+  await axios.post(webhook, { text: message });
+}
+
+async function sendEmail(to: string, subject: string, message: string) {
+  await transporter.sendMail({ from: 'alerts@cryptofinancehub.com', to, subject, text: message });
+}
+
+export async function notifyEvent(eventType: string, message: string) {
+  const channels = await prisma.notificationChannel.findMany({
+    where: { events: { has: eventType } },
+  });
+
+  for (const channel of channels) {
+    switch (channel.provider) {
+      case 'TELEGRAM':
+        await sendTelegram(channel.target, message);
+        break;
+      case 'SLACK':
+        await sendSlack(channel.target, message);
+        break;
+      case 'EMAIL':
+        await sendEmail(channel.target, `Crypto Finance Hub Alert`, message);
+        break;
+    }
+  }
+}
