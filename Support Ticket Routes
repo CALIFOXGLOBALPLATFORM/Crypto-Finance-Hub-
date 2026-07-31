@@ -1,0 +1,104 @@
+// src/routes/support.ts
+import { Router } from 'express';
+import { PrismaClient } from '@prisma/client';
+import { requireRole } from '../middleware/rbac';
+import { sendNotification } from '../services/notificationService';
+import { sendEmail } from '../services/emailService';
+
+const router = Router();
+const prisma = new PrismaClient();
+
+// 🔹 User creates a support ticket
+router.post('/create', async (req, res) => {
+  const { userId, subject, message } = req.body;
+  try {
+    const ticket = await prisma.supportTicket.create({
+      data: {
+        userId,
+        subject,
+        message,
+        status: 'OPEN',
+      },
+    });
+
+    await sendNotification(userId, 'SUPPORT_REPLY', 'Your support ticket has been created');
+    await sendEmail(req.user.email, 'Support Ticket Created', `<p>Your ticket "${subject}" has been opened.</p>`);
+
+    res.json({ message: 'Ticket created successfully', ticket });
+  } catch (err) {
+    res.status(400).json({ error: 'Failed to create ticket', details: err });
+  }
+});
+
+// 🔹 Admin assigns ticket
+router.post('/assign/:id', requireRole(['SUPPORT', 'ADMIN', 'SUPER_ADMIN']), async (req, res) => {
+  const { id } = req.params;
+  const { staffId } = req.body;
+
+  const ticket = await prisma.supportTicket.update({
+    where: { id },
+    data: { status: 'ASSIGNED' },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      adminId: req.user.id,
+      userId: ticket.userId,
+      action: 'SUPPORT_ASSIGN',
+      reason: `Assigned to staff ${staffId}`,
+      oldValue: JSON.stringify({ status: 'OPEN' }),
+      newValue: JSON.stringify({ status: 'ASSIGNED' }),
+    },
+  });
+
+  res.json({ message: 'Ticket assigned', ticket });
+});
+
+// 🔹 Admin resolves ticket
+router.post('/resolve/:id', requireRole(['SUPPORT', 'ADMIN', 'SUPER_ADMIN']), async (req, res) => {
+  const { id } = req.params;
+  const { resolution } = req.body;
+
+  const ticket = await prisma.supportTicket.update({
+    where: { id },
+    data: { status: 'RESOLVED' },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      adminId: req.user.id,
+      userId: ticket.userId,
+      action: 'SUPPORT_RESOLVE',
+      reason: resolution,
+      oldValue: JSON.stringify({ status: 'IN_PROGRESS' }),
+      newValue: JSON.stringify({ status: 'RESOLVED' }),
+    },
+  });
+
+  await sendNotification(ticket.userId, 'SUPPORT_REPLY', 'Your support ticket has been resolved');
+  await sendEmail('user@example.com', 'Support Ticket Resolved', `<p>Your ticket has been resolved: ${resolution}</p>`);
+
+  res.json({ message: 'Ticket resolved', ticket });
+});
+
+// 🔹 User closes ticket
+router.post('/close/:id', async (req, res) => {
+  const { id } = req.params;
+
+  const ticket = await prisma.supportTicket.update({
+    where: { id },
+    data: { status: 'CLOSED' },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      userId: ticket.userId,
+      action: 'SUPPORT_CLOSE',
+      reason: 'User closed ticket',
+      oldValue: JSON.stringify({ status: 'RESOLVED' }),
+      newValue: JSON.stringify({ status: 'CLOSED' }),
+    },
+  });
+
+  res.json({ message: 'Ticket closed', ticket });
+});
