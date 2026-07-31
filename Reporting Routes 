@@ -1,0 +1,51 @@
+// src/routes/reports.ts
+import { Router } from 'express';
+import { PrismaClient } from '@prisma/client';
+import { Parser as CsvParser } from 'json2csv';
+import ExcelJS from 'exceljs';
+import PDFDocument from 'pdfkit';
+
+const router = Router();
+const prisma = new PrismaClient();
+
+// 🔹 User transaction history export
+router.get('/user/:userId/transactions', async (req, res) => {
+  const { userId } = req.params;
+  const { format } = req.query; // pdf | csv | excel
+
+  const transactions = await prisma.transaction.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  if (format === 'csv') {
+    const parser = new CsvParser();
+    const csv = parser.parse(transactions);
+    res.header('Content-Type', 'text/csv');
+    res.attachment('transactions.csv');
+    return res.send(csv);
+  }
+
+  if (format === 'excel') {
+    const workbook = new ExcelJS.Workbook();
+    constAlright Dave, let’s build out the **reporting system routes** so both users and admins can generate **PDF, CSV, and Excel exports** for statements, transaction history, and analytics. This will make Crypto Finance Hub production‑ready for compliance and transparency.
+
+---
+
+## 📊 Reporting Routes
+
+```ts
+// src/routes/reports.ts
+import { Router } from 'express';
+import { PrismaClient } from '@prisma/client';
+import { Parser as CsvParser } from 'json2csv';
+import ExcelJS from 'exceljs';
+import PDFDocument from 'pdfkit';
+
+const router = Router();
+const prisma = new PrismaClient();
+
+// 🔹 User transaction history export
+router.get('/user/:userId/transactions', async (req, res) => {
+  const { userId } = req.params;
+  const { format } = req.query; // pdf | csv | excel
