@@ -1,0 +1,17 @@
+// src/services/notificationService.ts
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+export async function sendNotification(userId: string, type: string, message: string) {
+  // Save in-app notification
+  const notification = await prisma.notification.create({
+    data: {
+      userId,
+      type,
+      message,
+    },
+  });
+
+  return notification;
+}
